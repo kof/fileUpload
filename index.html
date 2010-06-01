@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<title>fileUpload</title>
+
+	<link rel="stylesheet" href="http://jquery-ui.googlecode.com/svn/tags/latest/themes/base/jquery-ui.css" type="text/css" media="all" />
+	<link rel="stylesheet" href="http://static.jquery.com/ui/css/demo-docs-theme/ui.theme.css" type="text/css" media="all" />
+
+
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.js"></script>
+
+	<script type="text/javascript" src="jquery.fileUpload.js"></script>
+	
+
+<style>
+
+
+</style>
+</head> 
+
+<body>
+
+<form id="test1" action="test.php">
+	Normal upload<br />
+	<input type="file" name="first"/><br />
+</form>
+<form id="test2" action="test2.php">
+	Multiple files upload<br />
+	<input type="file" name="second" multiple="multiple"/><br />
+</form>
+
+<div id="progressbar"></div>
+
+
+
+<script type="text/javascript">
+
+
+var $bar = $('#progressbar').progressbar();
+$('#test1, #test2').bind('change', function(){
+	$bar.progressbar('value', 0);
+	$(this).fileUpload({
+		progress: function(pr, xhr) {
+			$bar.progressbar('value', 100*pr.loaded/pr.total);
+		},
+		success: function(r){
+			var href = location.href + '/files/' + r.filename;
+			$('<a href="'+href+'" target="_blank">'+r.filename+'</a><br />').appendTo(document.body);
+		},
+		completeall: function() {
+		
+		}
+	});
+	return false;
+});
+
+</script>
+
+</body>
+</html>
