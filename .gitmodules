@@ -1,0 +1,3 @@
+[submodule "src/lib/flash"]
+	path = src/lib/flash
+	url = http://github.com/kof/flash.git

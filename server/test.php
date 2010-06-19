@@ -13,23 +13,29 @@ if(
 		$headers['Content-Length'],
 		$headers['X-File-Size'],
 		$headers['X-File-Name']
-	) &&
-	$headers['Content-Type'] === 'multipart/form-data' &&
-	$headers['Content-Length'] === $headers['X-File-Size']
+	) 
 ){
-	// create the object and assign property
-	$file = new stdClass;
-	$file->name = basename($headers['X-File-Name']);
-	$file->size = $headers['X-File-Size'];
-	$file->content = file_get_contents("php://input");
-	
-	
-	// if everything is ok, save the file somewhere
-	if(file_put_contents($path . $file->name, $file->content))
-		exit(json_encode(array(
-			'status' => 'success',
-			'filename' => $file->name
-		)));
+  try {
+    // create the object and assign property
+    $file = new stdClass;
+    $file->name = basename($headers['X-File-Name']);
+    $file->size = $headers['X-File-Size'];
+    $file->handle = fopen($path . $file->name,'wb');
+    $stream = fopen('php://input','r');
+    while(!feof($stream)) {
+      set_time_limit(0);
+      $content = fread($stream, 1024);
+      fwrite($file->handle,$content, strlen($content));
+    }
+    fclose($stream);
+    fclose($file->handle);
+    exit(json_encode(array(
+      'status' => 'success',
+      'filename' => $file->name
+    )));
+  } catch (Exception $e) {
+    exit ('Error' . $e->getMessage());
+  }
 }
 
 // if there is an error this will be the output instead of "OK"

@@ -1,0 +1,102 @@
+<html>
+<head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    var asBinary = false;
+    
+    var debug = new (function() {
+      this.log = function(s) { $('#debug').append('<p>'+s+'</p>'); }
+      this.warn = function(s) { $('#debug').append('<p style="color:orange">'+s+'</p>');  }
+      this.error = function(s) { $('#debug').append('<p style="color:red">'+s+'</p>');  }
+      this.clear = function() {  $('#debug').html(''); }
+    })();
+    
+    var upload = function(file, bin) {
+      var xhr;
+  
+      function progressHandler(evt)  {
+        debug.warn("PASS: event fired on XMLHttpRequestUpload: <b>" + evt.type + "</b> [Loaded: " + evt.loaded + " Total: " + evt.total + "]");
+      }
+  
+      function loadstartHandler(evt) {
+         debug.log("PASS: event fired on XMLHttpRequestUpload: <b>" +evt.type +"</b>");
+      }
+  
+      function loadHandler(evt)  {
+         debug.log("PASS:  event fired on XMLHttpRequestUpload: <b>" + evt.type+"</b>");
+      }
+  
+      function readystatechangeHandler(evt) {
+        //debug.log("PASS:  event fired on XMLHttpRequestUpload: <b>" +evt.type +"</b> readyState:"+ xhr.readyState);
+        if (xhr.readyState == xhr.DONE) { }
+      }
+  
+      xhr = new XMLHttpRequest;
+      
+      xhr.upload.onprogress = progressHandler;
+      xhr.upload.onloadstart = loadstartHandler;
+      xhr.upload.onload = loadHandler;
+      xhr.onreadystatechange = readystatechangeHandler;
+      xhr.open("POST", "/fileupload/server/test.php", true);
+      xhr.setRequestHeader("Content-Type", "multipart/form-data");
+      xhr.setRequestHeader("Cache-Control", "no-cache");
+      xhr.setRequestHeader('X-File-Name', file.fileName);
+      xhr.setRequestHeader('X-File-Size', file.fileSize);
+      (typeof bin == 'object') && xhr.sendAsBinary(bin) || xhr.send(file);
+    }
+    
+    
+    $('a.clear_console').bind('click',debug.clear );
+    $('#upload_form').bind('submit', function(evt) {
+      evt.preventDefault();
+      var as_type;
+      $('[name="as_type"]',this).each(function(i,el) {
+          if (el.checked) { as_type = $(el).val(); return false; }
+      });
+
+      var files = [];
+      $('[type="file"]', this).each(function( i, elem ){
+        this.files.length && $.each(this.files, function(){
+          files.push({ file: this, elem: elem});
+        });
+      });
+
+      $.each(files, function send( i, data ){
+          var file = data.file;
+          if (as_type == 'as_binary') {
+            try { 
+              var reader = new FileReader();
+            } catch(ex) {
+              debug.error(ex);
+            }
+            reader.onload = function(e) {
+              var bin = e.target.result;
+               debug.log("Send As Binary");
+              upload(file,bin);
+            };
+            reader.readAsBinaryString(file);
+          } else {
+            debug.log("Send As File");
+            upload(file);
+          }
+      });
+    });
+});    
+
+</script>
+<body>
+  <h3>This test that progress events are fired for XMLHttpRequestUpload objects.</h3>
+    <form id="upload_form">
+    <input type="file" name="upload" multiple="multiple"/><br />
+    <input type="radio" name="as_type" value="as_binary"> As Binary<br>
+    <input type="radio" name="as_type" value="as_file" checked="checked">  As File<br>
+  
+    <input type="submit" value="Upload" />
+    </form>
+    <a href="#" class="clear_console">Clear Debug Console</a>
+    <div id="debug"></div>
+ </body>
+</html>
