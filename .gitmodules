@@ -1,3 +1,6 @@
 [submodule "external/flash"]
 	path = external/flash
 	url = git@github.com:kof/flash.git
+[submodule "external/qunit"]
+	path = external/qunit
+	url = http://github.com/jquery/qunit.git
