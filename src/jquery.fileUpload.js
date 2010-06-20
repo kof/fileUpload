@@ -23,8 +23,8 @@ $.fn[plugin] = function( method, options ) {
         ret = this;
 
     this.each(function(){
-        var $input = $(this),
-            $form = $input.closest('form');
+        var $elem = $(this),
+            $form = $elem.closest('form');
         
         // if url is not set, get it from action attr
         if ( !s.url && $form.length )
@@ -38,18 +38,20 @@ $.fn[plugin] = function( method, options ) {
         !inst && $.each(s.runtime.split(' '), function( i, type ) {
             if ( support[type] ) {
                 // create instance
-                inst = new constructors[type]( $input, $form, s );
+                inst = new constructors[type]( $elem, $form, s );
                 
                 // attach instance to element in data store
-                $.data( this, plugin, inst );
+                $elem.data( plugin, inst );
                 
                 // handle onchange event
-                s.autoStart && $input.bind('change.' + plugin, $.proxy(inst, 'upload'));
-                               
+                s.autoStart && $elem.bind('change.' + plugin, $.proxy(inst, 'upload'));
+
                 return false;    
             }
         });
         
+        !inst && $.error(plugin + ": your browser doesn't correspond your runtime settings");
+
         if ( method ) {
             ret = inst[method].apply( inst, slice.call(args, 1) ); 
         }
@@ -59,302 +61,42 @@ $.fn[plugin] = function( method, options ) {
 };
 
 $.fn[plugin].defaults = {
-    runtime: 'html5 flash iframe',    
+    runtime: 'iframe flash ajax',    
     dataType: 'json',
     type: 'post',
     url: null,
     params: null,
     autoStart: true,
+    multiple: false,
     flash: {
-        fileFilters: null,
-        init: $.noop,
-        cancelselect: $.noop,
-        mouseover: $.noop,
-        mouseout: $.noop,
+        version: '9.0.0',
         swf: 'Upload.swf',
-        button: $('<input />', { type: 'button', value: 'Add Files' })
+        filters: null,
+        attr: {
+            width: '100%',
+            height: '100%' 
+        }
     },
-    filesadd: $.noop,
+    start: $.noop,
+    change: $.noop,
     progress: $.noop,
     completeall: $.noop,
-    error: $.noop
+    error: $.noop,
+    // flash callbacks
+    flashinit: $.noop,
+    flashcancelselect: $.noop,
+    flashcompletedata: $.noop
 };
 
-function FlashUpload($form, s ) {
-    
-    this._$form = $form;
-    this._files = [];
-    this._files.loaded = 0;
-    this._totalSize = 0;
-    this._s = s;
-    this._filesIndex = {};
-    this._xhrsHash = {};
-    this._$originContent = $form.html();
-    this._params = s.params || {};
-    this._flashCallbackName = plugin+'Callback'+(++timestamp);
-    
-    var self = this,
-    flashId = ++timestamp + '-flash',
-    $input = $('input[type="file"]', $form).first().hide(),
-    $flashContainer,
-    $browseButton = s.flash.button, 
-    flasheventprefix = 'flashupload';
-
-    $('input[type="hidden"]', $form).each(function() {
-        self._params[this.name] =  this.value;
-    });
-    
-    global[this._flashCallbackName] = function(evt) {
-        $flashContainer.trigger(flasheventprefix + evt.type.toLowerCase(), [evt.data]);
-    };
-
-    $input
-        .wrap($('<div></div>',{
-            css: {
-                position: 'relative', 
-                overflow: 'hidden'
-            }
-        }))
-        .before($('<div></div>', {
-            css: {
-            position: 'absolute',
-            top: 0,
-            width: '100%',
-            height: '100%'
-        },
-        html: function() {
-            $flashContainer = $(this).flash({
-                swf: s.flash.swf,
-                checkVersion: false,
-                version: '9.0.0',
-                attr: { 
-                    id: flashId, 
-                    name: flashId, 
-                    data: s.flash.swf,
-                    width:'100%',
-                    height:'100%' 
-                },
-                params: {
-                    flashvars: {
-                        id: flashId,
-                        filters: s.flash.fileFilters || '',
-                        multiple: !!($input.attr('multiple')),
-                        callbackName: self._flashCallbackName
-                    }
-                }
-            });
-        
-            self.flashObjectEl = $flashContainer.flash('get');
-        }
-    }))
-    .before($browseButton)
-    .parent() 
-        .width($browseButton.outerWidth(true)).height($browseButton.outerHeight(true));
-
-    $flashContainer.bind(flasheventprefix+'init.' + plugin , function(e, data) {
-        s.flash.init.apply($flashContainer, data);
-    })
-    .bind(flasheventprefix+'cancelselect.' + plugin , function(e, data) {
-        s.flash.cancelselect.apply($flashContainer, data);
-    })
-    .bind(flasheventprefix+'mouseover.' + plugin, function(e, data) {
-        s.flash.mouseover.apply($flashContainer, data);
-    })
-    .bind(flasheventprefix+'mouseout.' + plugin, function(e, data) {
-        s.flash.mouseout.apply($flashContainer, data);
-    })
-    .bind(flasheventprefix+'selectfiles.' + plugin , function(e, selectedFiles) {
-        var files = self._files;
-        $.each(selectedFiles, function(i,file) {
-            files.push(file);
-            self._filesIndex[file.id] = files.length-1;
-            self._totalSize+= file.size;
-        });
-
-        s.filesadd.apply($form, [files]);
-    
-        $form
-            .trigger("filesadd",files)
-            .trigger("change");
-    })
-    .bind(flasheventprefix+'uploadcompletedata.' + plugin, function(e, load) {
-        var xhr = self._xhrsHash[load.fileId];
-        xhr.onload(load);
-    })
-    .bind(flasheventprefix+'uploadprogress.' + plugin, function (e, progress) {
-        var xhr = self._xhrsHash[progress.fileId];
-        xhr.upload.progress(progress);
-    })
-    .bind(flasheventprefix+'uploaderror.' + plugin, function (e, error) {
-        var xhr = self._xhrsHash[error.fileId];
-        // have to find out the real error params!
-        xhr.error(error);
-    });
-
-};
-
-FlashUpload.prototype = {
-    destroy: function() {
-        delete global[this._flashCallbackName];
-        this._$form.removeData(plugin)
-        .find('*').unbind('.' + plugin)
-        .html(this._$originContent);
-    },
-    removeFile: function(fileId) {
-        var self = this, 
-        fileIdx = this._filesIndex[fileId],
-        file = this._files[fileIdx];
-        this._totalSize -= file.size;
-        this._files = this.flashObjectEl.flashUploaderRemoveFile(fileId);
-        // rebuild files cache
-        self._filesIndex = {};
-        $.each(this._files, function(i,file) {
-            self._filesIndex[file.id] = i;
-        });
-    },
-    upload: function() {
-        var self = this,
-            s = this._s, 
-            $form = this._$form, 
-            files = this._files;
-            
-        $.each(files, function(i, file){ 
-            var types = {
-                'content-type': s.dataType,
-                'Last-Modified': null,
-                Etag: null
-            };
-            // mock xhr object
-            var xhr = $.extend({}, xhrMock, {
-                onload: function(load) {
-                    file.loaded = load.total;
-                    file.complete = true;
-                    files.loaded ++;
-                    var loaded = sumLoaded(files);
-    
-                    trigger(self, 'success', [{ fileId: file.id, loaded: loaded, total: self._totalSize}, xhr ]);
-    
-                    files.loaded == files.length &&  trigger(self, 'completeall', [
-                        {files: files, total: self._totalSize, loaded: loaded}, xhr 
-                    ]);
-    
-                    $.extend(xhr, {
-                        status: 200,
-                        readyState: 4,
-                        responseText: load.text,
-                        responseXML: load.text
-                    });
-                    
-                    xhr.onreadystatechange();
-                },            
-                send: function() {
-                    self.flashObjectEl.flashUploaderSendFile(file.id, s.url, { 
-                        params: self._params
-                    });
-                },
-                error:function(error){ 
-                    trigger(self, 'error', [ error,xhr ]);
-                },
-                upload: {
-                    progress: function(progress) {
-                        file.loaded = progress.loaded;
-                        trigger(self, 'progress', [{
-                            fileId: file.id,
-                            total: self._totalSize,        
-                            loaded: sumLoaded(files)
-                        }, xhr]);
-                    }
-                },
-                getResponseHeader: function(type) {
-                    return types[type];                 
-                }
-            });
-    
-            self._xhrsHash[file.id] = xhr;
-    
-            s.xhr = function() {
-                return xhr;
-            };
-            
-            $.ajax(s);
-        });
-        
-        return false;
-    }
-}; // end of uploader prototype
-
-function AjaxUpload( $form, s ) {
-    this._$form = $form;
-    this._files = [];
-    this._totalSize = 0;
-    this._files.loaded = 0;
-    this._s = s;
-}
-
-AjaxUpload.prototype = {
-    upload: function() {
-        var self = this, s = this._s,
-        $form = this._$form, files = this._files, total = this._totalSize;
-        
-        var _xhr = s.xhr;
-        $('[type="file"]', this._$form).each(function( i, elem ) {     
-            this.files.length && $.each(this.files, function(i){
-                files.push({ fileId: 'file_'+i, file: this, elem: elem, loaded: 0});
-                total += this.fileSize;
-            });
-        });
-
-        $.each(files, function send( i, data ){
-            
-            var xhr = _xhr(),
-                _send = xhr.send,
-                file = data.file;
-            
-            s.xhr = function() {
-                return xhr;
-            };
-            
-            xhr.send = function() {
-            xhr.setRequestHeader("Content-Type", "multipart/form-data");
-            xhr.setRequestHeader("Cache-Control", "no-cache");
-            xhr.setRequestHeader('X-File-Name', file.fileName);
-            xhr.setRequestHeader('X-File-Size', file.fileSize);
-                _send.call(this, file);
-            };
-            
-            xhr.onload = function( load ) {
-                data.loaded = file.fileSize;
-                data.complete = true;
-                files.loaded ++;
-                var loaded = sumLoaded(files);
-                
-                trigger(self, 'success', [{
-                    fileId: file.id,
-                    loaded: loaded,
-                    total: total
-                }, xhr ]);
-
-                files.loaded == files.length && trigger(self, 'completeall', [
-                    {total: total, loaded: loaded }, 
-                    xhr
-                ]);
-            };
-            
-            var onprogress = xhr.upload.onprogress = function( progress ) {
-                data.loaded = progress.loaded;
-                trigger(self, 'progress', [{
-                    total: total,        
-                    loaded:  sumLoaded(files)
-                }, xhr]);
-            };
-            
-            $.ajax(s);
-        });
-    }
-}; // end of AjaxUpload prototype
-
-function IframeUpload( $input, $form, settings ) {
-    this._$input = $input;
+/**
+ * Iframe upload constructor
+ * @constructor
+ * @param {Object} $input
+ * @param {Object} $form
+ * @param {Object} settings
+ */
+function IframeUpload( $element, $form, settings ) {
+    this._$element = $element;
     this._$form = $form;
     this._settings = settings;
 }
@@ -362,7 +104,6 @@ function IframeUpload( $input, $form, settings ) {
 IframeUpload.prototype.upload = function() {
     var self = this,
         s = this._settings,
-        $input = this._$input,
         $form = this._$form,
         form = $form[0],
         $iframe,
@@ -441,13 +182,18 @@ IframeUpload.prototype.upload = function() {
             xhr.responseXML = toXml(xhr.responseText);
         };
         
-        trigger(self, 'completeall', [ {files: [s.url]}, xhr ]);
+        trigger(self, 'completeall', [ {files: null}, xhr ]);
+        trigger(self, 'progress', [{
+            total: 1,        
+            loaded:  1
+        }, xhr]);
+        
         xhr.onreadystatechange();
         close();
     }   
     
     function close() {
-        $input.attr(_attr);
+        $form.attr(_attr);
         // by removing iframe without delay FF still shows loading indicator
         setTimeout(function() {  
             $iframe.remove();
@@ -457,11 +203,265 @@ IframeUpload.prototype.upload = function() {
     $.ajax(s);
 };
 
+/**
+ * Flash upload constructor
+ * @constructor
+ * @param {Object} $element
+ * @param {Object} $form
+ * @param {Object} s
+ */
+function FlashUpload( $element, $form, s ) {
+    var self = this,
+        flashId = 'flash' + timestamp++,
+        $flashContainer;
+    
+    this._$element = $element;
+    this._$form = $form;
+    this._files = [];
+    this._files.loaded = 0;
+    this._filesIndex = {};
+    this._totalSize = 0;
+    this._settings = s;
+    this._xhrsHash = {};
+    this._params = s.params || {};
+    this._flashCallbackName = plugin + 'Callback' + timestamp++;
+
+    $('input[type="hidden"]', $form).each(function() {
+        self._params[this.name] =  this.value;
+    });
+    
+    // global callback function, that will be called by flash
+    global[this._flashCallbackName] = function( e ) {
+        var data = e.data;
+        
+        if ( e.type === 'error' ) {
+            var xhr = self._xhrsHash[data.fileId];
+            // have to find out the real error params!
+            xhr.error(data);
+        } else if ( e.type === 'progress' ) {
+            var xhr = self._xhrsHash[data.fileId];
+            xhr.upload.progress(progress);
+        } else if ( e.type === 'complete' ) {
+            var xhr = self._xhrsHash[data.fileId];
+            xhr.onload(data);
+        } else {
+            trigger(self, e.type, [e.data]);
+        }
+        
+    };
+
+    $element
+        .wrap($('<div></div>',{
+            css: {
+                position: 'relative', 
+                overflow: 'hidden'
+            }
+        }))
+        .before($('<div></div>', {
+            css: {
+                position: 'absolute',
+                top: 0,
+                width: '100%',
+                height: '100%'
+            },
+            html: function() {
+                $flashContainer = $(this).flash($.extend(true, s.flash, {
+                    attr: { id: flashId },
+                    params: {
+                        flashvars: {
+                            id: flashId,
+                            filters: s.flash.filters || '',
+                            multiple: !!(s.multiple || $element.attr('multiple')),
+                            callbackName: self._flashCallbackName
+                        }
+                    }
+                }));
+            
+                self.flashElement = $flashContainer.flash('get');
+            }
+        }));
+
+    $flashContainer.parent()
+        .width($element.outerWidth(true))
+        .height($element.outerHeight(true));
+
+    $element.bind('change.' + plugin, function(e, addedFiles) {
+        var files = self._files;
+        $.each(addedFiles, function(i,file) {
+            files.push(file);
+            self._filesIndex[file.id] = files.length-1;
+            self._totalSize += file.size;
+        });
+    });
+    
+};
+
+FlashUpload.prototype = {
+    destroy: function() {
+        delete global[this._flashCallbackName];
+        this._$element
+            .unbind('.' + plugin)
+            .unwrap();
+    },
+    removeFile: function( fileId ) {
+        var index = this._filesIndex[fileId];
+        this._totalSize -= this._files[index].size;
+        delete this._filesIndex[fileId];
+        this._files.splice(index, 1);
+        this.flashElement.flashUploadRemoveFile(fileId);
+    },
+    upload: function() {
+        var self = this,
+            s = this._settings, 
+            files = this._files;
+            
+        $.each(files, function(i, file){ 
+            var types = {
+                    'content-type': s.dataType,
+                    'Last-Modified': null,
+                    Etag: null
+                };
+            // mock xhr object
+            var xhr = $.extend({}, xhrMock, {
+                onload: function(load) {
+                    file.loaded = load.total;
+                    file.complete = true;
+                    files.loaded ++;
+                    var loaded = sumLoaded(files);
+    
+                    trigger(self, 'success', [{ fileId: file.id, loaded: loaded, total: self._totalSize}, xhr ]);
+    
+                    files.loaded == files.length &&  trigger(self, 'completeall', [
+                        {files: files, total: self._totalSize, loaded: loaded}, xhr 
+                    ]);
+    
+                    $.extend(xhr, {
+                        status: 200,
+                        readyState: 4,
+                        responseText: load.text,
+                        responseXML: load.text
+                    });
+                    
+                    xhr.onreadystatechange();
+                },            
+                send: function() {
+                    self.flashElement.flashUploadSendFile(file.id, s.url, { 
+                        params: self._params
+                    });
+                },
+                error:function(error){ 
+                    trigger(self, 'error', [ error, xhr ]);
+                },
+                upload: {
+                    progress: function(progress) {
+                        file.loaded = progress.loaded;
+                        trigger(self, 'progress', [{
+                            fileId: file.id,
+                            total: self._totalSize,        
+                            loaded: sumLoaded(files)
+                        }, xhr]);
+                    }
+                },
+                getResponseHeader: function(type) {
+                    return types[type];                 
+                }
+            });
+    
+            self._xhrsHash[file.id] = xhr;
+    
+            s.xhr = function() {
+                return xhr;
+            };
+            
+            $.ajax(s);
+        });
+        
+        return false;
+    }
+}; // end of FlashUpload prototype
+
+
+function AjaxUpload( $element, $form, settings ) {
+    this._$element = $element;
+    this._files = [];
+    this._files.loaded = 0;
+    this._totalSize = 0;
+    this._settings = settings;
+}
+
+AjaxUpload.prototype = {
+    upload: function() {
+        var self = this, 
+            s = this._settings,
+            $element = this._$element,
+            files = this._files, 
+            total = this._totalSize;
+        
+        var _xhr = s.xhr;
+        
+        $.each($element[0].files, function send( i, data ){
+            var file = {
+                    fileId: 'file_'+i, 
+                    fileName: data.fileName, 
+                    fileSize: data.fileSize,
+                    loaded: 0
+                },
+                xhr = _xhr(),
+                _send = xhr.send;
+                
+            total += file.fileSize;
+            files.push(file);
+            
+            s.xhr = function() {
+                return xhr;
+            };
+            
+            xhr.send = function() {
+            xhr.setRequestHeader("Content-Type", "multipart/form-data");
+            xhr.setRequestHeader("Cache-Control", "no-cache");
+            xhr.setRequestHeader('X-File-Name', file.fileName);
+            xhr.setRequestHeader('X-File-Size', file.fileSize);
+                _send.call(this, file);
+            };
+            
+            xhr.onload = function( load ) {
+                file.loaded = file.fileSize;
+                file.complete = true;
+                ++ files.loaded;
+                
+                var loaded = sumLoaded(files);
+                
+                trigger(self, 'success', [{
+                    fileId: file.id,
+                    loaded: loaded,
+                    total: total
+                }, xhr ]);
+
+                files.loaded == files.length && trigger(self, 'completeall', [
+                    {files: files, total: total, loaded: loaded }, 
+                    xhr
+                ]);
+            };
+            
+            var onprogress = xhr.upload.onprogress = function( progress ) {
+                data.loaded = progress.loaded;
+                trigger(self, 'progress', [{
+                    total: total,        
+                    loaded:  sumLoaded(files)
+                }, xhr]);
+            };
+            
+            $.ajax(s);
+        });
+    }
+}; // end of AjaxUpload prototype
+
+
 
     // detect if ajax and flash upload are supported  
 var support = {
         ajax: !!($.ajaxSettings.xhr().upload),
-        flash: $.flash && $.flash.checkVersion('9.0.0'),
+        flash: !!($.flash && $.flash.checkVersion($.fn[plugin].defaults.flash.version)),
         iframe: true
     },
     // constructors hash
@@ -485,10 +485,10 @@ var xhrMock = {
   
 function trigger( inst, type, params ) {
     var s = inst._settings,
-        $form = inst._$form;
+        $elem = inst._$element;
     params.push(s);    
-    s[type].apply($form, params);
-    $form.trigger(type, params);        
+    s[type] && s[type].apply($elem, params);
+    $elem.trigger(type, params);        
 }
 
 function sumLoaded(files) {

@@ -15,7 +15,6 @@
     <style>
       ul {  padding:0; margin:0;list-style-type: none; }
       ul.files span { margin: 10px; }
-      .hide { display: none; }
     </style>
 </head> 
 
@@ -27,22 +26,24 @@
 </form>
 <br /><br />
 
-<form id="test2" action="../server/test.php">
-	Ajax upload<br />
-	<input type="file" name="second" multiple="multiple" /><br />
-</form>
-
 <form id="test3" action="../server/test3.php">
-  <fieldset style="border: 1px solid #000">
-	  <legend>Flash Upload:</legend>
-	  <input type="file"  multiple="multiple" /><br />
+
+<fieldset style="border: 1px solid #000">
+    <legend>Flash Upload:</legend>
+    <button type="button" >Select files</button><br />
     <ul class="files"></ul>
-    <input class="hide" type="submit" value="Upload" />
-    <input type="hidden" name="test_name" value="test_value" />
-    <input type="hidden" name="test_name1" value="test_value1" />
-  </fieldset>
+</fieldset>
+
+</form>
+<br /><br />
+
+<form id="test2" action="../server/test.php">
+    Ajax upload<br />
+    <input type="file" name="second" multiple="multiple" /><br />
 </form>
 
+
+<br /><br />
 <div id="progressbar"></div>
 
 
@@ -51,75 +52,95 @@
 
 var $bar = $('#progressbar').progressbar({value: 0});
 
+function getAnchor( fileName ) {
+    return '<a href="/fileupload/server/files/'+fileName+'" target="_blank">' + fileName + '</a>';
+}
+
 $('#test1 input').fileUpload({
     runtime: 'iframe',
     progress: function(pr, xhr) {
         $bar.progressbar('value', 100*pr.loaded/pr.total);
     },
     success: function(r){
-        console.log(arguments);
-        var href = '/fileupload/server/files/' + r.filename;
+        $(getAnchor(r.filename) + '<br />').insertAfter(this);
     },
     completeall: function(r) {
-        $bar.progressbar('value', 100*r.loaded/r.total);
+        log('completeall', arguments);
     }
 });
 
-/*
-$('#test2').fileUpload({
-  runtime: 'html5',
-  progress: function(pr, xhr) {
-    $bar.progressbar('value', Math.round(100*pr.loaded/pr.total));
-  },
-  success: function(sr, res, xhr){
-    $bar.progressbar('value', 100*sr.loaded/sr.total);
-  },
-  completeall: function(r) {
-    console.log("completeall",r);
-  }
+var 
+$button = $('#test3 button').fileUpload({
+    runtime: 'flash',
+    multiple: true,
+    flash: {
+        filters: 'png,jpg,pdf'
+    },
+    progress: function(pr, xhr) {
+        log('progress', arguments);
+        $bar.progressbar('value', 100*pr.loaded/pr.total);
+    },
+    success: function(sr, xhr) {
+        $('#li'+sr.fileId).fadeTo('slow', 0.3, $.noop);
+        $bar.progressbar('value', 100*sr.loaded/sr.total);
+    },
+    completeall: function(r) {
+        log('completeall', arguments);
+    },
+    error: function(err,xhr) {
+        console.error(err, xhr);
+    },
+
+    change: function(files) {
+        var $ul = $('#test3 .files');
+
+        $.each(files, function(i,file) {
+            $('<li />', {
+                id: 'li'+file.id,
+                html: $('<span><a class="remove" href="#'+file.id+'">[X]</a></span><span class="file">'+getAnchor(file.name)+'</span><span class="file_size">'+Math.round(file.size/1024)+' kb</span>')
+            }).appendTo($ul);
+        });
+        
+    },
+    
+    flashinit: function() {
+        log('flashinit', arguments);
+    },
+    
+    flashcancelselect: function() {
+        log('flashcancelselect', arguments);
+    },
+    
+    flashcompletedata: function() {
+        log('flashuploadcompletedata', arguments);    
+    },
+
 });
 
-$('#test3').fileUpload({
-  runtime: 'flash html5',
-  autoStart: false,
-  flash: {
-    fileFilters: 'png,jpg,pdf'
-  },
-  filesadd: function(files) {
-    if (!files.length>0) return;
-    var form = this;
-    $('[type="submit"]', form).show();
-    var ul = $('.files', form);
-    ul.undelegate('a', 'click');
-    $("li", ul).remove();
-    $.each(files, function(i,file) {
-      $('<li />', {
-          id: 'li'+file.id,
-          html: $('<span><a href="#remove_file:'+file.id+'">[X]</a></span><span class="file">'+file.name+'</span><span class="file_size">'+Math.round(file.size/1024)+' kb</span>')
-      }).appendTo(ul);
-    });
-    ul.delegate('a', 'click', function(e) {
-      var fileId = $(this).attr('href').split(':')[1];
-      $(form).fileUpload('removeFile', fileId);
-      $(this).closest('li').remove();
-    });
-  },
-  progress: function(pr, xhr) {
-    $bar.progressbar('value', 100*pr.loaded/pr.total);
-  },
-  success: function(sr, xhr) {
-    $('#li'+sr.fileId).fadeTo('slow', 0.3, $.noop);
-    $bar.progressbar('value', 100*sr.loaded/sr.total);
-  },
-  completeall: function(r) {
-    //console.log("completeall",r);
-  },
-  error: function(err,xhr) {
-    console.error(err, xhr);
-  }
+
+$('#test3').delegate('a.remove', 'click', function(e) {
+    var fileId = $(this).attr('href').substr(1);
+    $button.fileUpload('removeFile', fileId);
+    $(this).closest('li').remove();
+    return false;
 });
 
-*/
+$('#test2 input').fileUpload({
+    runtime: 'ajax',
+    progress: function(pr, xhr) {
+        $bar.progressbar('value', Math.round(100*pr.loaded/pr.total));
+    },
+    success: function(sr, res, xhr){
+        $bar.progressbar('value', 100*sr.loaded/sr.total);
+    },
+    completeall: function(r) {
+        log("completeall", arguments);
+    }
+});
+
+function log(){
+    window.console && console.log.apply(this, arguments);
+} 
 </script>
 
 </body>
