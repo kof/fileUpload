@@ -232,20 +232,17 @@ function FlashUpload( $element, $form, s ) {
     
     // global callback function, that will be called by flash
     global[this._flashCallbackName] = function( e ) {
-        var data = e.data;
-        
+        var data = e.data,
+            xhr = self._xhrsHash[data.fileId];
         if ( e.type === 'error' ) {
-            var xhr = self._xhrsHash[data.fileId];
             // have to find out the real error params!
             xhr.error(data);
         } else if ( e.type === 'progress' ) {
-            var xhr = self._xhrsHash[data.fileId];
             xhr.upload.progress(progress);
         } else if ( e.type === 'complete' ) {
-            var xhr = self._xhrsHash[data.fileId];
             xhr.onload(data);
         } else {
-            trigger(self, e.type, [e.data]);
+            trigger(self, e.type, [data]);
         }
         
     };
