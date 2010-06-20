@@ -12,24 +12,23 @@
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.js"></script>
 	<script type="text/javascript" src="../external/flash/src/jquery.flash.js"></script>
 	<script type="text/javascript" src="../src/jquery.fileUpload.js"></script>
-
-
-<style>
-  ul {  padding:0; margin:0;list-style-type: none; }
-  ul.files span { margin: 10px; }
-  .hide { display: none; }
-</style>
+    <style>
+      ul {  padding:0; margin:0;list-style-type: none; }
+      ul.files span { margin: 10px; }
+      .hide { display: none; }
+    </style>
 </head> 
 
 <body>
 
 <form id="test1" action="../server/test3.php">
-	Normal upload<br />
-	<input type="file" name="Filedata" /><br />
+	Iframe upload<br />
+	<input type="file" name="Filedata" />
 </form>
+<br /><br />
 
 <form id="test2" action="../server/test.php">
-	Multiple files upload<br />
+	Ajax upload<br />
 	<input type="file" name="second" multiple="multiple" /><br />
 </form>
 
@@ -50,22 +49,23 @@
 
 <script type="text/javascript">
 
-var $bar = $('#progressbar').progressbar();
-$bar.progressbar('value', 0);
-    
-$('#test1').fileUpload({
-  runtime: 'iframe',
-  progress: function(pr, xhr) {
-    $bar.progressbar('value', 100*pr.loaded/pr.total);
-  },
-  success: function(r){
-    var href = '/fileupload/server/files/' + r.filename;
-  },
-  completeall: function(r) {
-    r && $bar.progressbar('value', 100*r.loaded/r.total);
-  }
+var $bar = $('#progressbar').progressbar({value: 0});
+
+$('#test1 input').fileUpload({
+    runtime: 'iframe',
+    progress: function(pr, xhr) {
+        $bar.progressbar('value', 100*pr.loaded/pr.total);
+    },
+    success: function(r){
+        console.log(arguments);
+        var href = '/fileupload/server/files/' + r.filename;
+    },
+    completeall: function(r) {
+        $bar.progressbar('value', 100*r.loaded/r.total);
+    }
 });
 
+/*
 $('#test2').fileUpload({
   runtime: 'html5',
   progress: function(pr, xhr) {
@@ -118,6 +118,8 @@ $('#test3').fileUpload({
     console.error(err, xhr);
   }
 });
+
+*/
 </script>
 
 </body>
