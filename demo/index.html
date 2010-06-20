@@ -4,10 +4,6 @@
 <head>
 	<title>fileUpload</title>
 
-	<link rel="stylesheet" href="http://jquery-ui.googlecode.com/svn/tags/latest/themes/base/jquery-ui.css" type="text/css" media="all" />
-	<link rel="stylesheet" href="http://static.jquery.com/ui/css/demo-docs-theme/ui.theme.css" type="text/css" media="all" />
-
-
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.js"></script>
 	<script type="text/javascript" src="../external/flash/src/jquery.flash.js"></script>
@@ -37,11 +33,16 @@
 </form>
 <br /><br />
 
-<form id="test2" action="../server/test.php">
-    Ajax upload<br />
-    <input type="file" name="second" multiple="multiple" /><br />
-</form>
 
+<form id="test2" action="../server/test.php">
+
+<fieldset style="border: 1px solid #000">
+    <legend>Ajax Upload:</legend>
+    <input type="file" name="second" multiple="multiple" /><br />
+    <ul class="files"></ul>
+</fieldset>
+
+</form>
 
 <br /><br />
 <div id="progressbar"></div>
@@ -125,8 +126,21 @@ $('#test3').delegate('a.remove', 'click', function(e) {
     return false;
 });
 
-$('#test2 input').fileUpload({
+$input = $('#test2 input').fileUpload({
     runtime: 'ajax',
+    change: function(files) {
+        console.log(arguments);
+        var $ul = $('#test2 .files');
+
+        $.each(files, function(i,file) {
+            $('<li />', {
+                id: 'li'+file.id,
+                html: $('<span><a class="remove" href="#'+file.id+'">[X]</a></span><span class="file">'+getAnchor(file.name)+'</span><span class="file_size">'+Math.round(file.size/1024)+' kb</span>')
+            }).appendTo($ul);
+        });
+        
+    },
+
     progress: function(pr, xhr) {
         $bar.progressbar('value', Math.round(100*pr.loaded/pr.total));
     },
@@ -136,6 +150,13 @@ $('#test2 input').fileUpload({
     completeall: function(r) {
         log("completeall", arguments);
     }
+});
+
+$('#test2').delegate('a.remove', 'click', function(e) {
+    var fileId = $(this).attr('href').substr(1);
+    $input.fileUpload('removeFile', fileId);
+    $(this).closest('li').remove();
+    return false;
 });
 
 function log(){

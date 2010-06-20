@@ -91,7 +91,7 @@ $.fn[plugin].defaults = {
 /**
  * Iframe upload constructor
  * @constructor
- * @param {Object} $input
+ * @param {Object} $element
  * @param {Object} $form
  * @param {Object} settings
  */
@@ -378,6 +378,14 @@ FlashUpload.prototype = {
 }; // end of FlashUpload prototype
 
 
+/**
+ * Ajax upload constructor
+ * @todo call change callback onchange
+ * @constructor
+ * @param {Object} $element
+ * @param {Object} $form
+ * @param {Object} settings
+ */
 function AjaxUpload( $element, $form, settings ) {
     this._$element = $element;
     this._files = [];
@@ -392,9 +400,8 @@ AjaxUpload.prototype = {
             s = this._settings,
             $element = this._$element,
             files = this._files, 
-            total = this._totalSize;
-        
-        var _xhr = s.xhr;
+            total = this._totalSize,
+            _xhr = s.xhr;
         
         $.each($element[0].files, function send( i, data ){
             var file = {
@@ -414,10 +421,10 @@ AjaxUpload.prototype = {
             };
             
             xhr.send = function() {
-            xhr.setRequestHeader("Content-Type", "multipart/form-data");
-            xhr.setRequestHeader("Cache-Control", "no-cache");
-            xhr.setRequestHeader('X-File-Name', file.fileName);
-            xhr.setRequestHeader('X-File-Size', file.fileSize);
+                xhr.setRequestHeader("Content-Type", "multipart/form-data");
+                xhr.setRequestHeader("Cache-Control", "no-cache");
+                xhr.setRequestHeader('X-File-Name', file.fileName);
+                xhr.setRequestHeader('X-File-Size', file.fileSize);
                 _send.call(this, file);
             };
             
