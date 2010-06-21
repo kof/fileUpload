@@ -82,7 +82,7 @@ $.fn[plugin].defaults = {
     progress: $.noop,
     completeall: $.noop,
     error: $.noop,
-    // flash callbacks
+    // flash only callbacks
     flashinit: $.noop,
     flashcancelselect: $.noop,
     flashcompletedata: $.noop
@@ -90,6 +90,7 @@ $.fn[plugin].defaults = {
 
 /**
  * Iframe upload constructor
+ * TODO implement destroy method
  * @constructor
  * @param {Object} $element
  * @param {Object} $form
@@ -101,106 +102,107 @@ function IframeUpload( $element, $form, settings ) {
     this._settings = settings;
 }
 
-IframeUpload.prototype.upload = function() {
-    var self = this,
-        s = this._settings,
-        $form = this._$form,
-        form = $form[0],
-        $iframe,
-        $hiddenInputs;
+IframeUpload.prototype = {
+    destroy: function() {
+        alert('not implemented');    
+    },
     
-    var _attr = {
+    upload: function() {
+        var self = this, s = this._settings, $form = this._$form, form = $form[0], $iframe, $hiddenInputs;
+        
+        var _attr = {
             action: form.action,
             target: form.target,
             enctype: form.enctype,
             method: form.method
-       },
-       
-       attr = {
-           action: s.url,
-           target: 'file-upload-'+ timestamp++,
-           enctype: 'multipart/form-data',
-           method: 'POST'
-       };     
-            
-   
-    // mock request header types
-    var types = {
+        }, attr = {
+            action: s.url,
+            target: 'file-upload-' + timestamp++,
+            enctype: 'multipart/form-data',
+            method: 'POST'
+        };
+        
+        
+        // mock request header types
+        var types = {
             'content-type': s.dataType,
             'Last-Modified': null,
             Etag: null
         };
-    
-    // mock xhr object
-    var xhr = $.extend({}, xhrMock, {
-        open: function(type, url, async) {
-            $form.attr(attr);
-            // create iframe
-            $iframe = $('<iframe name="'+attr.target+'" style="display: none;" src="javascript:;"></iframe>')
-                .load(onload).insertAfter($form);
-            
-            // add fields from ajax settings
-            if ( s.data ) {
-                var data = s.data.split('&'),
-                    hiddenInputs = '';
-                $.each(data, function(i,param){
-                    param = param.split('=');
-                    if ( param[0] && param[1] )
-                        hiddenInputs += '<input type="hidden" name="' + param[0] + '" value="' + param[1] + '" />';
-                });                
-
-                $hiddenInputs = $(hiddenInputs).appendTo($form);
-            }
-        },
-        send: function() {
-            // submit form 
-            $form.submit();
-        },
-        getResponseHeader: function(type) {
-            return types[type];                 
-        },
-        abort: close
-    });    
-    
-    s.xhr = function() {
-        return xhr;
-    };
-    
-    function onload() {
-        var doc = $iframe.contents()[0];
-        $.extend(xhr, {
-            status: 200,
-            readyState: 4,
-            responseText: doc.body ? doc.body.innerHTML : null,
-            responseXML: doc.XMLDocument ? doc.XMLDocument : doc
+        
+        // mock xhr object
+        var xhr = $.extend({}, xhrMock, {
+            open: function(type, url, async) {
+                $form.attr(attr);
+                // create iframe
+                $iframe = $('<iframe name="' + attr.target + '" style="display: none;" src="javascript:;"></iframe>').load(onload).insertAfter($form);
+                
+                // add fields from ajax settings
+                if (s.data) {
+                    var data = s.data.split('&'), hiddenInputs = '';
+                    $.each(data, function(i, param) {
+                        param = param.split('=');
+                        if (param[0] && param[1]) 
+                            hiddenInputs += '<input type="hidden" name="' + param[0] + '" value="' + param[1] + '" />';
+                    });
+                    
+                    $hiddenInputs = $(hiddenInputs).appendTo($form);
+                }
+            },
+            send: function() {
+                // submit form 
+                $form.submit();
+            },
+            getResponseHeader: function(type) {
+                return types[type];
+            },
+            abort: close
         });
         
-        if ( s.dataType === 'json' || s.dataType === 'script' ) {
-            var ta = doc.getElementsByTagName('textarea')[0];
-            xhr.responseText = ta ? ta.value : xhr.responseText;
-        } else if ( s.dataType == 'xml' && !xhr.responseXML && xhr.responseText != null ) {
-            xhr.responseXML = toXml(xhr.responseText);
+        s.xhr = function() {
+            return xhr;
         };
         
-        trigger(self, 'completeall', [ {files: null}, xhr ]);
-        trigger(self, 'progress', [{
-            total: 1,        
-            loaded:  1
-        }, xhr]);
+        function onload() {
+            var doc = $iframe.contents()[0];
+            $.extend(xhr, {
+                status: 200,
+                readyState: 4,
+                responseText: doc.body ? doc.body.innerHTML : null,
+                responseXML: doc.XMLDocument ? doc.XMLDocument : doc
+            });
+            
+            if (s.dataType === 'json' || s.dataType === 'script') {
+                var ta = doc.getElementsByTagName('textarea')[0];
+                xhr.responseText = ta ? ta.value : xhr.responseText;
+            } else if (s.dataType == 'xml' && !xhr.responseXML && xhr.responseText != null) {
+                xhr.responseXML = toXml(xhr.responseText);
+            };
+            
+            trigger(self, 'completeall', [{
+                files: null
+            }, xhr]);
+            
+            // be consistant, let progressbar work
+            trigger(self, 'progress', [{
+                total: 1,
+                loaded: 1
+            }, xhr]);
+            
+            xhr.onreadystatechange();
+            close();
+        }
         
-        xhr.onreadystatechange();
-        close();
-    }   
-    
-    function close() {
-        $form.attr(_attr);
-        // by removing iframe without delay FF still shows loading indicator
-        setTimeout(function() {  
-            $iframe.remove();
-        } , 500);
+        function close() {
+            $form.attr(_attr);
+            // by removing iframe without delay FF still shows loading indicator
+            setTimeout(function() {
+                $iframe.remove();
+            }, 500);
+        }
+        
+        $.ajax(s);
     }
-    
-    $.ajax(s);
 };
 
 /**
@@ -235,7 +237,7 @@ function FlashUpload( $element, $form, s ) {
         var data = e.data,
             xhr = self._xhrsHash[data.fileId];
         if ( e.type === 'error' ) {
-            // have to find out the real error params!
+            // TODO have to find out the real error params!
             xhr.error(data);
         } else if ( e.type === 'progress' ) {
             xhr.upload.progress(progress);
@@ -380,7 +382,8 @@ FlashUpload.prototype = {
 
 /**
  * Ajax upload constructor
- * @todo call change callback onchange
+ * TODO call change callback onchange
+ * TODO implement destroy and removeFile
  * @constructor
  * @param {Object} $element
  * @param {Object} $form
@@ -395,12 +398,19 @@ function AjaxUpload( $element, $form, settings ) {
 }
 
 AjaxUpload.prototype = {
+    destroy: function() {
+        alert('not implemented');    
+    },
+    removeFile: function() {
+        alert('not implemented');    
+    },
     upload: function() {
         var self = this, 
             s = this._settings,
             $element = this._$element,
             files = this._files, 
             total = this._totalSize,
+            // referemce to original function returning xhr object
             _xhr = s.xhr;
         
         $.each($element[0].files, function send( i, data ){
@@ -411,6 +421,7 @@ AjaxUpload.prototype = {
                     loaded: 0
                 },
                 xhr = _xhr(),
+                // save reference to original send method
                 _send = xhr.send;
                 
             total += file.fileSize;
