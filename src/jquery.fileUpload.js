@@ -20,7 +20,7 @@ $.fn[plugin] = function( method, options ) {
     
     var args = arguments,
         s = $.extend(true, {}, $.ajaxSettings, args.callee.defaults, options),
-        ret = this;
+        ret;
 
     this.each(function(){
         var $elem = $(this),
@@ -57,7 +57,7 @@ $.fn[plugin] = function( method, options ) {
         }
     });
     
-    return ret;
+    return ret || this;
 };
 
 $.fn[plugin].defaults = {
