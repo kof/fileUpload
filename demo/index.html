@@ -17,18 +17,23 @@
 <body>
 
 <form id="test1" action="../server/test3.php">
-	Iframe upload<br />
-	<input type="file" name="Filedata" />
+    
+    <fieldset style="border: 1px solid #000">
+        <legend>Iframe Upload:</legend>
+        <input type="file" name="Filedata" />
+        <ul class="files"></ul>
+    </fieldset>
+
 </form>
 <br /><br />
 
 <form id="test3" action="../server/test3.php">
-
-<fieldset style="border: 1px solid #000">
-    <legend>Flash Upload:</legend>
-    <button type="button" >Select files</button><br />
-    <ul class="files"></ul>
-</fieldset>
+    
+    <fieldset style="border: 1px solid #000">
+        <legend>Flash Upload:</legend>
+        <button type="button" >Select files</button><br />
+        <ul class="files"></ul>
+    </fieldset>
 
 </form>
 <br /><br />
@@ -36,11 +41,11 @@
 
 <form id="test2" action="../server/test.php">
 
-<fieldset style="border: 1px solid #000">
-    <legend>Ajax Upload:</legend>
-    <input type="file" name="second" multiple="multiple" /><br />
-    <ul class="files"></ul>
-</fieldset>
+    <fieldset style="border: 1px solid #000">
+        <legend>Ajax Upload:</legend>
+        <input type="file" name="second" multiple="multiple" /><br />
+        <ul class="files"></ul>
+    </fieldset>
 
 </form>
 
@@ -63,7 +68,7 @@ $('#test1 input').fileUpload({
         $bar.progressbar('value', 100*pr.loaded/pr.total);
     },
     success: function(r){
-        $(getAnchor('<br />' + r.filename) ).insertAfter(this);
+        $('<br />' + getAnchor(r.filename) ).appendTo('#test1 .files');
     },
     completeall: function(r) {
         log('completeall', arguments);

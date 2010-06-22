@@ -136,7 +136,7 @@ IframeUpload.prototype = {
                 Etag: null
             };
         
-        var xhr = createObject(xhrMock);
+        var xhr = getXhrObj();
         
         xhr.open = function( type, url, async ) {
             $form.attr(attr);
@@ -334,7 +334,7 @@ FlashUpload.prototype = {
             
         $.each(files, function(i, file){ 
 
-            var xhr = createObject(xhrMock);
+            var xhr = getXhrObj();
             
             xhr.onload = function( load ) {
                 file.loaded = load.total;
@@ -505,9 +505,11 @@ var support = {
         iframe: IframeUpload
     },
     
-    timestamp = (new Date).getTime(),
+    timestamp = (new Date).getTime();
     
-    xhrMock = { 
+
+function getXhrObj() {
+    return { 
         responseText: null,
         responseXML: null,
         status: 0,
@@ -518,6 +520,7 @@ var support = {
         open: $.noop,
         upload: {}
     };
+}
   
 function trigger( inst, type, params ) {
     var s = inst._settings,
@@ -545,17 +548,5 @@ function toXml( s ) {
         return (new DOMParser()).parseFromString(s, 'text/xml');
     }
 }
-
-/*
- * Clone an object at a very fast way
- */
-var createObject = (function(){
-    var C = function(){};
-    
-    return function createObject( obj ) {
-        C.prototype = obj;
-        return new C;
-    }
-})();
 
 })(this, window.document, Array.prototype.slice, jQuery, 'fileUpload');
