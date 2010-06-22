@@ -136,7 +136,7 @@ IframeUpload.prototype = {
                 Etag: null
             };
         
-        var xhr = $.extend({}, xhrMock);
+        var xhr = createObject(xhrMock);
         
         xhr.open = function( type, url, async ) {
             $form.attr(attr);
@@ -333,8 +333,8 @@ FlashUpload.prototype = {
             };
             
         $.each(files, function(i, file){ 
-            // mock xhr object
-            var xhr = $.extend({}, xhrMock);
+
+            var xhr = createObject(xhrMock);
             
             xhr.onload = function( load ) {
                 file.loaded = load.total;
@@ -546,5 +546,16 @@ function toXml( s ) {
     }
 }
 
+/*
+ * Clone an object at a very fast way
+ */
+var createObject = (function(){
+    var C = function(){};
+    
+    return function createObject( obj ) {
+        C.prototype = obj;
+        return new C;
+    }
+})();
 
 })(this, window.document, Array.prototype.slice, jQuery, 'fileUpload');

@@ -63,7 +63,7 @@ $('#test1 input').fileUpload({
         $bar.progressbar('value', 100*pr.loaded/pr.total);
     },
     success: function(r){
-        $(getAnchor(r.filename) + '<br />').insertAfter(this);
+        $(getAnchor('<br />' + r.filename) ).insertAfter(this);
     },
     completeall: function(r) {
         log('completeall', arguments);
