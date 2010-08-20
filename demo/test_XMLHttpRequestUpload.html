@@ -40,7 +40,7 @@ $(document).ready(function() {
       xhr.upload.onloadstart = loadstartHandler;
       xhr.upload.onload = loadHandler;
       xhr.onreadystatechange = readystatechangeHandler;
-      xhr.open("POST", "/fileupload/server/test.php", true);
+      xhr.open("POST", location.href, true);
       xhr.setRequestHeader("Content-Type", "multipart/form-data");
       xhr.setRequestHeader("Cache-Control", "no-cache");
       xhr.setRequestHeader('X-File-Name', file.fileName);
@@ -89,7 +89,7 @@ $(document).ready(function() {
 </script>
 <body>
   <h3>This test that progress events are fired for XMLHttpRequestUpload objects.</h3>
-    <form id="upload_form">
+    <form id="upload_form" action="">
     <input type="file" name="upload" multiple="multiple"/><br />
     <input type="radio" name="as_type" value="as_binary"> As Binary<br>
     <input type="radio" name="as_type" value="as_file" checked="checked">  As File<br>

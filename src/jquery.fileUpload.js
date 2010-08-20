@@ -142,7 +142,8 @@ IframeUpload.prototype = {
             $form.attr(attr);
             // create iframe
             $iframe = $('<iframe name="' + attr.target + '" style="display: none;" src="javascript:;"></iframe>')
-                .load(xhr.onload).insertAfter($form);
+                .load(xhr.onload)
+                .insertAfter($form);
             
             // add fields from ajax settings
             if ( !s.data ) return;
@@ -170,7 +171,7 @@ IframeUpload.prototype = {
         xhr.abort = close;
         
         xhr.onload = function() {
-            var doc = $iframe.contents()[0];
+            var doc = $iframe[0].contentDocument || $iframe[0].contentWindow.document;
             $.extend(xhr, {
                 status: 200,
                 readyState: 4,
